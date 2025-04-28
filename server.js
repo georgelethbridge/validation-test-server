@@ -8,8 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/epo-applicants/:epNumber', async (req, res) => {
-  const epNumber = req.params.epNumber;
-  const patentNumber = `EP${epNumber}`;
+  const epNumber = req.params.epNumber; // already full 'EP4102501'
 
   try {
     const tokenResponse = await fetch('https://ops.epo.org/3.2/auth/accesstoken', {
@@ -23,9 +22,8 @@ app.get('/epo-applicants/:epNumber', async (req, res) => {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    const endpointUrl = (epNumber.length === 7)
-      ? `https://ops.epo.org/3.2/rest-services/register/publication/epodoc/${patentNumber}/biblio.json`
-      : `https://ops.epo.org/3.2/rest-services/register/application/epodoc/${patentNumber}/biblio.json`;
+    // Always use publication endpoint because you already have a publication number like EP4102501
+    const endpointUrl = `https://ops.epo.org/3.2/rest-services/register/publication/epodoc/${epNumber}/biblio.json`;
 
     const dataResponse = await fetch(endpointUrl, {
       method: 'GET',
@@ -39,6 +37,7 @@ app.get('/epo-applicants/:epNumber', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch applicant data' });
   }
 });
+
 
 app.get('/scrape/:epNumber', async (req, res) => {
   const epNumber = req.params.epNumber;
