@@ -1,14 +1,15 @@
 import express from 'express';
 import fetch from 'node-fetch';
+import puppeteer from 'puppeteer'; // Puppeteer instead of Playwright
 import dotenv from 'dotenv';
-import { chromium } from 'playwright';
-
 dotenv.config();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// EPO Applicants endpoint
 app.get('/epo-applicants', async (req, res) => {
-  const patentNumber = req.query.epNumber; // not req.params.epNumber
+  const patentNumber = req.query.epNumber; // Get patent number from query
 
   try {
     const tokenResponse = await fetch('https://ops.epo.org/3.2/auth/accesstoken', {
@@ -32,65 +33,48 @@ app.get('/epo-applicants', async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching EPO applicant info:', error);
     res.status(500).json({ error: 'Failed to fetch applicant data' });
   }
 });
 
-
-
-app.get('/scrape/:epNumber', async (req, res) => {
+// GB Owners scraping endpoint
+app.get('/scrape-gb-owner/:epNumber', async (req, res) => {
   const epNumber = req.params.epNumber;
   try {
-    const browser = await chromium.launch({ headless: true });
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
     const page = await browser.newPage();
-    await page.goto(`https://example.com/patent/${epNumber}`); // <-- Replace with your real link
+    const patentUrl = `https://www.search-for-intellectual-property.service.gov.uk/${epNumber}`;
 
-    const scrapedData = await page.textContent('selector-you-want'); // <-- Replace this
+    await page.goto(patentUrl, { waitUntil: 'domcontentloaded' });
+
+    const tableExists = await page.$('#patentApplicantsOwnersTable');
+    if (!tableExists) {
+      await browser.close();
+      return res.status(404).json({ error: 'Owners table not found' });
+    }
+
+    const owners = await page.$$eval('#patentApplicantsOwnersTable tbody tr', rows =>
+      rows.map(row => {
+        const cells = row.querySelectorAll('td');
+        return {
+          name: cells[0]?.innerText.trim() || '',
+          address: cells[1]?.innerText.trim() || ''
+        };
+      })
+    );
 
     await browser.close();
-    res.json({ scraped: scrapedData });
+    res.json({ owners });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to scrape data' });
+    console.error('Error scraping GB Owner info:', error);
+    res.status(500).json({ error: 'Failed to scrape GB Owner info' });
   }
 });
 
-app.get('/scrape-gb-owner/:epNumber', async (req, res) => {
-    const epNumber = req.params.epNumber;
-    try {
-      const browser = await chromium.launch({ headless: true });
-      const page = await browser.newPage();
-      const patentUrl = `https://www.search-for-intellectual-property.service.gov.uk/${epNumber}`;
-  
-      await page.goto(patentUrl, { waitUntil: 'domcontentloaded' });
-  
-      // Check if the table exists
-      const tableExists = await page.$('#patentApplicantsOwnersTable');
-      if (!tableExists) {
-        await browser.close();
-        return res.status(404).json({ error: 'Owners table not found' });
-      }
-  
-      const owners = await page.$$eval('#patentApplicantsOwnersTable tbody tr', rows =>
-        rows.map(row => {
-          const cells = row.querySelectorAll('td');
-          return {
-            name: cells[0]?.innerText.trim() || '',
-            address: cells[1]?.innerText.trim() || ''
-          };
-        })
-      );
-  
-      await browser.close();
-      res.json({ owners });
-    } catch (error) {
-      console.error('Error scraping GB Owner info:', error);
-      res.status(500).json({ error: 'Failed to scrape GB Owner info' });
-    }
-  });
-  
-
+// Basic root check
 app.get('/', (req, res) => {
   res.send('GB Server is running 🚀');
 });
