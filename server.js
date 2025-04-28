@@ -7,8 +7,8 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.get('/epo-applicants/:epNumber', async (req, res) => {
-  const patentNumber = req.params.epNumber; // USE DIRECTLY
+app.get('/epo-applicants', async (req, res) => {
+  const patentNumber = req.query.epNumber; // not req.params.epNumber
 
   try {
     const tokenResponse = await fetch('https://ops.epo.org/3.2/auth/accesstoken', {
