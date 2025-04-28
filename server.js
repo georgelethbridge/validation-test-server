@@ -1,12 +1,10 @@
 import express from 'express';
 import fetch from 'node-fetch';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import { chromium } from 'playwright';
 
 dotenv.config();
 const app = express();
-app.use(cors());
 const PORT = process.env.PORT || 3000;
 
 app.get('/epo-applicants/:epNumber', async (req, res) => {
