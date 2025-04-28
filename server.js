@@ -56,6 +56,41 @@ app.get('/scrape/:epNumber', async (req, res) => {
   }
 });
 
+app.get('/scrape-gb-owner/:epNumber', async (req, res) => {
+    const epNumber = req.params.epNumber;
+    try {
+      const browser = await chromium.launch({ headless: true });
+      const page = await browser.newPage();
+      const patentUrl = `https://www.search-for-intellectual-property.service.gov.uk/${epNumber}`;
+  
+      await page.goto(patentUrl, { waitUntil: 'domcontentloaded' });
+  
+      // Check if the table exists
+      const tableExists = await page.$('#patentApplicantsOwnersTable');
+      if (!tableExists) {
+        await browser.close();
+        return res.status(404).json({ error: 'Owners table not found' });
+      }
+  
+      const owners = await page.$$eval('#patentApplicantsOwnersTable tbody tr', rows =>
+        rows.map(row => {
+          const cells = row.querySelectorAll('td');
+          return {
+            name: cells[0]?.innerText.trim() || '',
+            address: cells[1]?.innerText.trim() || ''
+          };
+        })
+      );
+  
+      await browser.close();
+      res.json({ owners });
+    } catch (error) {
+      console.error('Error scraping GB Owner info:', error);
+      res.status(500).json({ error: 'Failed to scrape GB Owner info' });
+    }
+  });
+  
+
 app.get('/', (req, res) => {
   res.send('GB Server is running 🚀');
 });
