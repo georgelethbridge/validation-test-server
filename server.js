@@ -43,9 +43,11 @@ app.get('/scrape-gb-owner/:epNumber', async (req, res) => {
   const epNumber = req.params.epNumber;
   try {
     const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      executablePath: puppeteer.executablePath(), // use Puppeteer's default path
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: 'new'
     });
-    const page = await browser.newPage();
+        const page = await browser.newPage();
     const patentUrl = `https://www.search-for-intellectual-property.service.gov.uk/${epNumber}`;
 
     await page.goto(patentUrl, { waitUntil: 'domcontentloaded' });
