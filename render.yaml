@@ -2,7 +2,6 @@ services:
   - type: web
     name: validation-test-server
     env: node
-    buildCommand: |
-      npm install
-      npx puppeteer install
-    startCommand: node server.js
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start

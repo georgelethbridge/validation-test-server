@@ -1,6 +1,6 @@
 import express from 'express';
 import fetch from 'node-fetch';
-import puppeteer from 'puppeteer';
+import cheerio from 'cheerio';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -40,48 +40,35 @@ app.get('/epo-applicants', async (req, res) => {
   }
 });
 
-// Scrape GB Owners from UK IPO
+// UK IPO scraping via cheerio
 app.get('/scrape-gb-owner/:epNumber', async (req, res) => {
   const epNumber = req.params.epNumber;
   const patentUrl = `https://www.search-for-intellectual-property.service.gov.uk/${epNumber}`;
 
   try {
-    const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: 'new'
+    const response = await fetch(patentUrl);
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    const owners = [];
+
+    $('#patentApplicantsOwnersTable tbody tr').each((i, row) => {
+      const name = $(row).find('td').eq(0).text().trim();
+      const address = $(row).find('td').eq(1).text().trim();
+      if (name && address) {
+        owners.push({ name, address });
+      }
     });
 
-    const page = await browser.newPage();
-    await page.goto(patentUrl, { waitUntil: 'domcontentloaded' });
-
-    const tableExists = await page.$('#patentApplicantsOwnersTable');
-    if (!tableExists) {
-      await browser.close();
-      return res.status(404).json({ error: 'Owners table not found' });
-    }
-
-    const owners = await page.$$eval('#patentApplicantsOwnersTable tbody tr', rows =>
-      rows.map(row => {
-        const cells = row.querySelectorAll('td');
-        return {
-          name: cells[0]?.innerText.trim() || '',
-          address: cells[1]?.innerText.trim() || ''
-        };
-      })
-    );
-
-    await browser.close();
     res.json({ owners });
-
-  } catch (error) {
-    console.error('Error scraping GB Owner info:', error);
+  } catch (err) {
+    console.error('Error scraping:', err);
     res.status(500).json({ error: 'Failed to scrape GB Owner info' });
   }
 });
 
-// Root route
 app.get('/', (req, res) => {
-  res.send('GB Scraper server is running 🚀');
+  res.send('Cheerio scraping server is live 🚀');
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
