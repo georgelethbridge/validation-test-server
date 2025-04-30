@@ -1,13 +1,13 @@
 import express from 'express';
 import fetch from 'node-fetch';
-import * as cheerio from 'cheerio';
+import puppeteer from 'puppeteer';
 import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// EPO OPS: Get applicants
+// EPO OPS API - Fetch applicant info
 app.get('/epo-applicants', async (req, res) => {
   const patentNumber = req.query.epNumber;
 
@@ -28,7 +28,7 @@ app.get('/epo-applicants', async (req, res) => {
 
     const dataResponse = await fetch(endpointUrl, {
       method: 'GET',
-      headers: { 'Authorization': 'Bearer ' + accessToken }
+      headers: { 'Authorization': `Bearer ${accessToken}` }
     });
 
     const data = await dataResponse.json();
@@ -40,28 +40,44 @@ app.get('/epo-applicants', async (req, res) => {
   }
 });
 
-// UK IPO scraping via cheerio
+// GB Owner Info Scraper - Using Puppeteer
 app.get('/scrape-gb-owner/:epNumber', async (req, res) => {
   const epNumber = req.params.epNumber;
   const patentUrl = `https://www.search-for-intellectual-property.service.gov.uk/${epNumber}`;
 
   try {
-    const response = await fetch(patentUrl);
-    const html = await response.text();
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless: 'new'
+    });
 
-    // Return full HTML for debugging
-    res.set('Content-Type', 'text/html');
-    res.send(html);
-  } catch (err) {
-    console.error('Error fetching GB HTML:', err);
-    res.status(500).send('Error fetching GB page');
+    const page = await browser.newPage();
+    await page.goto(patentUrl, { waitUntil: 'domcontentloaded' });
+
+    const owners = await page.$$eval('#patentApplicantsOwnersTable tbody tr', rows =>
+      rows.map(row => {
+        const cells = row.querySelectorAll('td');
+        return {
+          name: cells[0]?.innerText.trim() || '',
+          address: cells[1]?.innerText.trim() || ''
+        };
+      })
+    );
+
+    await browser.close();
+    res.json({ owners });
+
+  } catch (error) {
+    console.error('Error scraping GB owner info:', error);
+    res.status(500).json({ error: 'Failed to scrape GB Owner info' });
   }
 });
 
-
-
+// Health check
 app.get('/', (req, res) => {
-  res.send('Cheerio scraping server is live 🚀');
+  res.send('✅ Puppeteer-based validation server is running.');
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

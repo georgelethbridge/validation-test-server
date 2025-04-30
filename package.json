@@ -1,7 +1,7 @@
 {
   "name": "validation-test-server",
   "version": "1.0.0",
-  "description": "Node.js API to fetch EPO and GB patent data using Puppeteer",
+  "description": "Puppeteer server on Replit",
   "type": "module",
   "main": "server.js",
   "scripts": {

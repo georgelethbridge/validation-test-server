@@ -1,7 +1,5 @@
 services:
   - type: web
     name: validation-test-server
-    env: node
+    env: docker
     plan: free
-    buildCommand: npm install
-    startCommand: npm start
