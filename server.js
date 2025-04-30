@@ -43,7 +43,6 @@ app.get('/scrape-gb-owner/:epNumber', async (req, res) => {
   const epNumber = req.params.epNumber;
   try {
     const browser = await puppeteer.launch({
-      executablePath: puppeteer.executablePath(), // use Puppeteer's default path
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       headless: 'new'
     });

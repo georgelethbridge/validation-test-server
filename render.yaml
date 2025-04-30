@@ -4,5 +4,5 @@ services:
     env: node
     buildCommand: |
       npm install
-      npx playwright install --with-deps
+      npx puppeteer install
     startCommand: node server.js
