@@ -48,32 +48,16 @@ app.get('/scrape-gb-owner/:epNumber', async (req, res) => {
   try {
     const response = await fetch(patentUrl);
     const html = await response.text();
-    const $ = cheerio.load(html);
 
-    const tableExists = $('#patentApplicantsOwnersTable').length > 0;
-    console.log(`GB scrape: table found = ${tableExists}`);
-
-    const owners = [];
-
-    $('#patentApplicantsOwnersTable tbody tr').each((i, row) => {
-      const name = $(row).find('td').eq(0).text().trim();
-      const address = $(row).find('td').eq(1).text().trim();
-      if (name && address) {
-        owners.push({ name, address });
-      }
-    });
-
-    if (owners.length === 0) {
-      console.log('No owners parsed for', epNumber);
-    }
-
-    res.json({ owners });
-
+    // Return full HTML for debugging
+    res.set('Content-Type', 'text/html');
+    res.send(html);
   } catch (err) {
-    console.error('Error scraping GB owner info:', err);
-    res.status(500).json({ error: 'Failed to scrape GB Owner info' });
+    console.error('Error fetching GB HTML:', err);
+    res.status(500).send('Error fetching GB page');
   }
 });
+
 
 
 app.get('/', (req, res) => {
