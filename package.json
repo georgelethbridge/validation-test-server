@@ -1,13 +1,14 @@
 {
   "name": "validation-test-server",
   "version": "1.0.0",
-  "description": "Secure server for EPO OPS API and Playwright scraping",
+  "description": "Secure server for EPO OPS API and GB owner scraping",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "dotenv": "^16.0.0",
+    "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "node-fetch": "^2.6.9",
     "puppeteer": "^21.11.0"

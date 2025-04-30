@@ -1,15 +1,15 @@
 import express from 'express';
 import fetch from 'node-fetch';
-import puppeteer from 'puppeteer'; // Puppeteer instead of Playwright
+import puppeteer from 'puppeteer';
 import dotenv from 'dotenv';
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// EPO Applicants endpoint
+// EPO OPS: Get applicants
 app.get('/epo-applicants', async (req, res) => {
-  const patentNumber = req.query.epNumber; // Get patent number from query
+  const patentNumber = req.query.epNumber;
 
   try {
     const tokenResponse = await fetch('https://ops.epo.org/3.2/auth/accesstoken', {
@@ -20,6 +20,7 @@ app.get('/epo-applicants', async (req, res) => {
       },
       body: 'grant_type=client_credentials'
     });
+
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
@@ -29,26 +30,28 @@ app.get('/epo-applicants', async (req, res) => {
       method: 'GET',
       headers: { 'Authorization': 'Bearer ' + accessToken }
     });
-    const data = await dataResponse.json();
 
+    const data = await dataResponse.json();
     res.json(data);
+
   } catch (error) {
-    console.error('Error fetching EPO applicant info:', error);
+    console.error('Error fetching EPO applicants:', error);
     res.status(500).json({ error: 'Failed to fetch applicant data' });
   }
 });
 
-// GB Owners scraping endpoint
+// Scrape GB Owners from UK IPO
 app.get('/scrape-gb-owner/:epNumber', async (req, res) => {
   const epNumber = req.params.epNumber;
+  const patentUrl = `https://www.search-for-intellectual-property.service.gov.uk/${epNumber}`;
+
   try {
     const browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       headless: 'new'
     });
-        const page = await browser.newPage();
-    const patentUrl = `https://www.search-for-intellectual-property.service.gov.uk/${epNumber}`;
 
+    const page = await browser.newPage();
     await page.goto(patentUrl, { waitUntil: 'domcontentloaded' });
 
     const tableExists = await page.$('#patentApplicantsOwnersTable');
@@ -69,15 +72,16 @@ app.get('/scrape-gb-owner/:epNumber', async (req, res) => {
 
     await browser.close();
     res.json({ owners });
+
   } catch (error) {
     console.error('Error scraping GB Owner info:', error);
     res.status(500).json({ error: 'Failed to scrape GB Owner info' });
   }
 });
 
-// Basic root check
+// Root route
 app.get('/', (req, res) => {
-  res.send('GB Server is running 🚀');
+  res.send('GB Scraper server is running 🚀');
 });
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
